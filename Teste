@@ -1,0 +1,991 @@
+-- Roblox services
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextChatService = game:GetService("TextChatService")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+getgenv().ScriptID = "MeuScriptUnico" 
+local allowedUsers = {
+    -- ["magnusfxp"] = true,
+    ["scout7ixs"] = true,
+   -- ["dripcliento"] = true,
+}
+
+local selectedPlayer = nil
+local JailObjects = {}
+local FrozenPlayers = {}
+
+-- Sistema de comunicação melhorado entre scripts
+local function setupRemoteEvents()
+    local adminRemote = ReplicatedStorage:FindFirstChild("AdminPanelRemote")
+    if not adminRemote then
+        adminRemote = Instance.new("RemoteEvent")
+        adminRemote.Name = "AdminPanelRemote"
+        adminRemote.Parent = ReplicatedStorage
+    end
+    
+    local adminBindable = ReplicatedStorage:FindFirstChild("AdminPanelBindable")
+    if not adminBindable then
+        adminBindable = Instance.new("BindableEvent")
+        adminBindable.Name = "AdminPanelBindable"
+        adminBindable.Parent = ReplicatedStorage
+    end
+    
+    return adminRemote, adminBindable
+end
+
+local adminRemote, adminBindable = setupRemoteEvents()
+
+-- Função para enviar comando para TODOS os jogadores
+local function broadcastCommand(command, targetName, additionalData)
+    -- Executar localmente primeiro
+    pcall(function()
+        processCommand({
+            command = command,
+            target = targetName,
+            sender = LocalPlayer.Name,
+            data = additionalData or {}
+        })
+    end)
+    
+    -- Enviar via RemoteEvent (para outros clientes)
+    pcall(function()
+        adminRemote:FireServer({
+            command = command,
+            target = targetName,
+            sender = LocalPlayer.Name,
+            data = additionalData or {}
+        })
+    end)
+    
+    -- Também via BindableEvent para garantir sincronização local
+    pcall(function()
+        adminBindable:Fire({
+            command = command,
+            target = targetName,
+            sender = LocalPlayer.Name,
+            data = additionalData or {}
+        })
+    end)
+end
+
+-- FUNÇÃO CENTRALIZADA PARA PROCESSAR COMANDOS
+function processCommand(commandData)
+    if not commandData then return end
+    
+    local command = commandData.command
+    local targetName = commandData.target
+    local senderName = commandData.sender
+    local data = commandData.data or {}
+    
+    local targetPlayer = Players:FindFirstChild(targetName)
+    if not targetPlayer then return end
+    
+    -- EXECUTAR COMANDOS BASEADO NO TIPO
+    if command == "jail" then
+        CreateJail(targetPlayer, true) -- true indica que é via broadcast
+    elseif command == "unjail" then
+        RemoveJail(targetPlayer, true)
+    elseif command == "freeze" then
+        -- Toggle freeze/unfreeze
+        if FrozenPlayers[targetPlayer] then
+            UnfreezePlayer(targetPlayer, true)
+        else
+            FreezePlayer(targetPlayer, true)
+        end
+    elseif command == "kill" and targetPlayer == LocalPlayer then
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid")
+        if hum then hum.Health = 0 end
+    elseif command == "kick" and targetPlayer == LocalPlayer then
+        LocalPlayer:Kick("Você foi expulso pelo painel de admin por " .. senderName)
+    elseif command == "bring" and targetPlayer == LocalPlayer then
+        local senderPlayer = Players:FindFirstChild(senderName)
+        local targetRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local senderRoot = senderPlayer and senderPlayer.Character and senderPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if targetRoot and senderRoot then
+            targetRoot.CFrame = senderRoot.CFrame + Vector3.new(2, 0, 0)
+        end
+    elseif command == "sharingan" and targetPlayer == LocalPlayer then
+        ExecuteSharingan()
+    end
+end
+
+-- Receber comandos via RemoteEvent
+adminRemote.OnClientEvent:Connect(function(commandData)
+    processCommand(commandData)
+end)
+
+-- Receber comandos via BindableEvent
+adminBindable.Event:Connect(function(commandData)
+    processCommand(commandData)
+end)
+
+-- Função para executar Sharingan
+function ExecuteSharingan()
+    local Sound = Instance.new("Sound",game:GetService("SoundService"))
+    Sound.SoundId = "rbxassetid://1592708450"
+    Sound:Play()
+    local Intro = Instance.new("ScreenGui")
+    local Logo = Instance.new("ImageLabel")
+    local Circle = Instance.new("UICorner")
+
+    Intro.Name = "Intro"
+    Intro.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    Intro.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    Logo.Name = "Logo"
+    Logo.Parent = Intro
+    Logo.AnchorPoint = Vector2.new(0.5, 0.5)
+    Logo.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Logo.BackgroundTransparency = 1.000
+    Logo.BorderColor3 = Color3.fromRGB(0, 0, 0)
+    Logo.BorderSizePixel = 0
+    Logo.Position = UDim2.new(0.5, 0, 0.5, 0)
+    Logo.Size = UDim2.new(0, 0, 0, 0)
+    Logo.Image = "rbxassetid://114416257899946"
+    Logo.ImageTransparency = 0
+    Logo.ScaleType = Enum.ScaleType.Crop
+
+    Circle.CornerRadius = UDim.new(0.5, 0)
+    Circle.Name = "Circle"
+    Circle.Parent = Logo
+
+    local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+    local sizeTween = TweenService:Create(Logo, tweenInfo, {Size = UDim2.new(0, 400, 0, 400)})
+    local rotationTween = TweenService:Create(Logo, tweenInfo, {Rotation = 360})
+
+    sizeTween:Play()
+    rotationTween:Play()
+
+    task.wait(3) 
+
+    Logo:TweenSizeAndPosition(
+        UDim2.new(0, 0, 0, 0), 
+        UDim2.new(0.5, 0, 0.5, 0), 
+        Enum.EasingDirection.Out,
+        Enum.EasingStyle.Quad, 2,
+        true,
+        function()
+            Intro:Destroy()
+        end
+    )
+end
+
+-- Função para mostrar notificações
+function showNotification(text, color)
+    spawn(function()
+        local gui = Instance.new("ScreenGui")
+        gui.Parent = PlayerGui
+        
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(0, 350, 0, 60)
+        frame.Position = UDim2.new(0.5, -175, 0.1, 0)
+        frame.BackgroundColor3 = color
+        frame.BackgroundTransparency = 0.1
+        frame.Parent = gui
+        
+        local gradient = Instance.new("UIGradient")
+        local brightColor = Color3.new(
+            math.min(color.R * 1.5, 1),
+            math.min(color.G * 1.5, 1), 
+            math.min(color.B * 1.5, 1)
+        )
+        gradient.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, color),
+            ColorSequenceKeypoint.new(1, brightColor)
+        }
+        gradient.Parent = frame
+        
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 12)
+        corner.Parent = frame
+        
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(255, 255, 255)
+        stroke.Thickness = 2
+        stroke.Parent = frame
+        
+        local textLabel = Instance.new("TextLabel")
+        textLabel.Size = UDim2.new(1, 0, 1, 0)
+        textLabel.BackgroundTransparency = 1
+        textLabel.Text = text
+        textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        textLabel.TextScaled = true
+        textLabel.Font = Enum.Font.GothamBold
+        textLabel.TextStrokeTransparency = 0
+        textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        textLabel.Parent = frame
+        
+        -- Animação de entrada
+        frame.Position = UDim2.new(0.5, -175, -0.1, 0)
+        local enterTween = TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Position = UDim2.new(0.5, -175, 0.1, 0)
+        })
+        enterTween:Play()
+        
+        task.wait(3)
+        
+        -- Animação de saída
+        local exitTween = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Position = UDim2.new(0.5, -175, -0.1, 0),
+            BackgroundTransparency = 1
+        })
+        exitTween:Play()
+        exitTween.Completed:Connect(function()
+            gui:Destroy()
+        end)
+    end)
+end
+
+-- Função para criar jaula MELHORADA com sincronização
+function CreateJail(player, fromBroadcast)
+    -- Evitar duplicação se já existe jaula
+    if JailObjects[player] then return end
+    
+    local character = player.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local HRP = character.HumanoidRootPart
+        
+        -- Configuração da jaula
+        local cageSize = Vector3.new(10, 10, 10)
+        local wallThickness = 0.5
+        local transparency = 0.3
+        local cageColor = Color3.fromRGB(75, 0, 130)
+
+        local cageModel = Instance.new("Model")
+        cageModel.Name = "JaulaDeAdmin_" .. player.Name
+        cageModel.Parent = workspace
+
+        local function createWall(size, positionOffset)
+            local wall = Instance.new("Part")
+            wall.Size = size
+            wall.Anchored = true
+            wall.CanCollide = true
+            wall.Transparency = transparency
+            wall.Color = cageColor
+            wall.Material = Enum.Material.ForceField
+            wall.CFrame = HRP.CFrame * positionOffset
+            wall.Parent = cageModel
+            
+            -- Adicionar borda roxa brilhante
+            local stroke = Instance.new("SelectionBox")
+            stroke.Color3 = Color3.fromRGB(147, 112, 219)
+            stroke.LineThickness = 0.2
+            stroke.Transparency = 0.5
+            stroke.Adornee = wall
+            stroke.Parent = wall
+        end
+
+        -- Piso
+        createWall(Vector3.new(cageSize.X, wallThickness, cageSize.Z), CFrame.new(0, -cageSize.Y/2, 0))
+
+        -- Teto
+        createWall(Vector3.new(cageSize.X, wallThickness, cageSize.Z), CFrame.new(0, cageSize.Y/2, 0))
+
+        -- Frente
+        createWall(Vector3.new(cageSize.X, cageSize.Y, wallThickness), CFrame.new(0, 0, -cageSize.Z/2))
+
+        -- Trás
+        createWall(Vector3.new(cageSize.X, cageSize.Y, wallThickness), CFrame.new(0, 0, cageSize.Z/2))
+
+        -- Direita
+        createWall(Vector3.new(wallThickness, cageSize.Y, cageSize.Z), CFrame.new(cageSize.X/2, 0, 0))
+
+        -- Esquerda
+        createWall(Vector3.new(wallThickness, cageSize.Y, cageSize.Z), CFrame.new(-cageSize.X/2, 0, 0))
+
+        JailObjects[player] = cageModel
+        
+        -- Notificação visual SEMPRE aparece
+        showNotification("🔒 " .. player.Name .. " foi preso!", Color3.fromRGB(75, 0, 130))
+        
+        -- Sistema de monitoramento para manter a jaula
+        spawn(function()
+            while JailObjects[player] and player.Parent do
+                task.wait(0.5)
+                if character and character:FindFirstChild("HumanoidRootPart") then
+                    local currentHRP = character.HumanoidRootPart
+                    -- Verificar se o jogador não saiu muito da jaula
+                    local distance = (currentHRP.Position - HRP.Position).Magnitude
+                    if distance > 8 then
+                        -- Teleportar de volta para o centro da jaula
+                        currentHRP.CFrame = HRP.CFrame
+                    end
+                end
+            end
+        end)
+    end
+end
+
+-- Função para remover jaula MELHORADA
+function RemoveJail(player, fromBroadcast)
+    if JailObjects[player] then
+        JailObjects[player]:Destroy()
+        JailObjects[player] = nil
+        
+        -- Notificação visual SEMPRE aparece
+        showNotification("🔓 " .. player.Name .. " foi solto!", Color3.fromRGB(34, 139, 34))
+    end
+end
+
+-- Função para congelar jogador CORRIGIDA
+function FreezePlayer(player, fromBroadcast)
+    -- Evitar duplicação
+    if FrozenPlayers[player] then return end
+    
+    local character = player.Character
+    if character then
+        -- Desativar movimento do Humanoid
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = 0
+            humanoid.JumpPower = 0
+            humanoid.JumpHeight = 0
+        end
+
+        -- Ancorar TODAS as partes do corpo para congelamento completo
+        for _, part in pairs(character:GetChildren()) do
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                part.Anchored = true
+            end
+        end
+        
+        -- Ancorar o HumanoidRootPart por último
+        local HRP = character:FindFirstChild("HumanoidRootPart")
+        if HRP then
+            HRP.Anchored = true
+        end
+        
+        -- Armazenar dados para restaurar depois
+        FrozenPlayers[player] = {
+            originalWalkSpeed = humanoid and humanoid.WalkSpeed or 16,
+            originalJumpPower = humanoid and humanoid.JumpPower or 50,
+            originalJumpHeight = humanoid and humanoid.JumpHeight or 7.2,
+            humanoid = humanoid,
+            hrp = HRP,
+            character = character
+        }
+        
+        -- Criar efeito visual de gelo
+        local iceEffect = Instance.new("Part")
+        iceEffect.Name = "IceEffect_" .. player.Name
+        iceEffect.Size = character:GetExtentsSize() + Vector3.new(1, 1, 1)
+        iceEffect.CFrame = HRP.CFrame
+        iceEffect.Anchored = true
+        iceEffect.CanCollide = false
+        iceEffect.Transparency = 0.5
+        iceEffect.Color = Color3.fromRGB(173, 216, 230)
+        iceEffect.Material = Enum.Material.Ice
+        iceEffect.Parent = workspace
+        
+        local iceCorner = Instance.new("UICorner")
+        iceCorner.CornerRadius = UDim.new(0, 8)
+        
+        FrozenPlayers[player].iceEffect = iceEffect
+        
+        -- Notificação visual SEMPRE aparece
+        showNotification("❄️ " .. player.Name .. " foi congelado!", Color3.fromRGB(70, 130, 180))
+        
+        -- Sistema de monitoramento para manter congelado
+        spawn(function()
+            while FrozenPlayers[player] and player.Parent do
+                task.wait(0.1)
+                local char = player.Character
+                if char then
+                    local hum = char:FindFirstChildOfClass("Humanoid")
+                    if hum then
+                        hum.WalkSpeed = 0
+                        hum.JumpPower = 0
+                        hum.JumpHeight = 0
+                    end
+                    
+                    -- Manter todas as partes ancoradas
+                    for _, part in pairs(char:GetChildren()) do
+                        if part:IsA("BasePart") then
+                            part.Anchored = true
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end
+
+-- Função para descongelar jogador CORRIGIDA
+function UnfreezePlayer(player, fromBroadcast)
+    if FrozenPlayers[player] then
+        local data = FrozenPlayers[player]
+        
+        -- Restaurar movimento do Humanoid
+        if data.humanoid and data.humanoid.Parent then
+            data.humanoid.WalkSpeed = data.originalWalkSpeed or 16
+            data.humanoid.JumpPower = data.originalJumpPower or 50
+            data.humanoid.JumpHeight = data.originalJumpHeight or 7.2
+        end
+        
+        -- Desancorar TODAS as partes do corpo
+        if data.character and data.character.Parent then
+            for _, part in pairs(data.character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Anchored = false
+                end
+            end
+        end
+        
+        -- Remover efeito visual de gelo
+        if data.iceEffect then
+            data.iceEffect:Destroy()
+        end
+        
+        FrozenPlayers[player] = nil
+        
+        -- Notificação visual SEMPRE aparece
+        showNotification("🔥 " .. player.Name .. " foi descongelado!", Color3.fromRGB(255, 140, 0))
+    end
+end
+
+if allowedUsers[LocalPlayer.Name] then
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "AdminPanelGUI"
+    ScreenGui.Parent = PlayerGui
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    -- Frame principal com gradiente roxo
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 350, 0, 480)
+    MainFrame.Position = UDim2.new(0.5, -175, 0.5, -240)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    MainFrame.BackgroundTransparency = 0.1
+    MainFrame.BorderSizePixel = 0
+    MainFrame.ClipsDescendants = true
+    MainFrame.Active = true
+    MainFrame.Selectable = true
+    MainFrame.Draggable = true
+    MainFrame.Parent = ScreenGui
+
+    -- Gradiente roxo de fundo
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(75, 0, 130)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(106, 90, 205)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(123, 104, 238))
+    }
+    gradient.Rotation = 45
+    gradient.Parent = MainFrame
+
+    -- Borda externa brilhante
+    local UICornerMain = Instance.new("UICorner")
+    UICornerMain.CornerRadius = UDim.new(0, 15)
+    UICornerMain.Parent = MainFrame
+
+    local MainStroke = Instance.new("UIStroke")
+    MainStroke.Color = Color3.fromRGB(147, 112, 219)
+    MainStroke.Thickness = 3
+    MainStroke.Transparency = 0.3
+    MainStroke.Parent = MainFrame
+
+    -- Efeito de brilho interno
+    local InnerGlow = Instance.new("Frame")
+    InnerGlow.Size = UDim2.new(1, -6, 1, -6)
+    InnerGlow.Position = UDim2.new(0, 3, 0, 3)
+    InnerGlow.BackgroundTransparency = 1
+    InnerGlow.Parent = MainFrame
+
+    local InnerStroke = Instance.new("UIStroke")
+    InnerStroke.Color = Color3.fromRGB(255, 255, 255)
+    InnerStroke.Thickness = 1
+    InnerStroke.Transparency = 0.7
+    InnerStroke.Parent = InnerGlow
+
+    local InnerCorner = Instance.new("UICorner")
+    InnerCorner.CornerRadius = UDim.new(0, 12)
+    InnerCorner.Parent = InnerGlow
+
+    -- Título estilizado
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 0, 50)
+    Title.Position = UDim2.new(0, 0, 0, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text = "⚡ PAINEL DE ADMIN SINCRONIZADO V2 ⚡"
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 16
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextStrokeTransparency = 0
+    Title.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    Title.TextYAlignment = Enum.TextYAlignment.Center
+    Title.Parent = MainFrame
+
+    -- Linha decorativa
+    local Line = Instance.new("Frame")
+    Line.Size = UDim2.new(0.8, 0, 0, 2)
+    Line.Position = UDim2.new(0.1, 0, 0, 50)
+    Line.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Line.BackgroundTransparency = 0.3
+    Line.BorderSizePixel = 0
+    Line.Parent = MainFrame
+
+    local LineCorner = Instance.new("UICorner")
+    LineCorner.CornerRadius = UDim.new(1, 0)
+    LineCorner.Parent = Line
+
+    -- ScrollingFrame melhorado
+    local ScrollingFrame = Instance.new("ScrollingFrame")
+    ScrollingFrame.Size = UDim2.new(1, -20, 1, -70)
+    ScrollingFrame.Position = UDim2.new(0, 10, 0, 60)
+    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 450)
+    ScrollingFrame.ScrollBarThickness = 8
+    ScrollingFrame.BackgroundTransparency = 1
+    ScrollingFrame.ZIndex = 2
+    ScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    ScrollingFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+    ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(147, 112, 219)
+    ScrollingFrame.Parent = MainFrame
+
+    local function createButton(text, yPos, icon)
+        local button = Instance.new("TextButton")
+        button.Size = UDim2.new(1, -10, 0, 45)
+        button.Position = UDim2.new(0, 0, 0, yPos)
+        button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        button.BackgroundTransparency = 0.2
+        button.Text = (icon or "") .. " " .. text
+        button.Font = Enum.Font.GothamBold
+        button.TextSize = 16
+        button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        button.TextStrokeTransparency = 0
+        button.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        button.ZIndex = 2
+        button.Parent = ScrollingFrame
+
+        -- Gradiente do botão
+        local btnGradient = Instance.new("UIGradient")
+        btnGradient.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(138, 43, 226)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(75, 0, 130))
+        }
+        btnGradient.Rotation = 90
+        btnGradient.Parent = button
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 10)
+        corner.Parent = button
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(147, 112, 219)
+        stroke.Thickness = 2
+        stroke.Transparency = 0.5
+        stroke.Parent = button
+
+        -- Efeito hover
+        button.MouseEnter:Connect(function()
+            local hoverTween = TweenService:Create(button, TweenInfo.new(0.2), {
+                BackgroundTransparency = 0
+            })
+            local strokeTween = TweenService:Create(stroke, TweenInfo.new(0.2), {
+                Transparency = 0.2
+            })
+            hoverTween:Play()
+            strokeTween:Play()
+        end)
+
+        button.MouseLeave:Connect(function()
+            local leaveTween = TweenService:Create(button, TweenInfo.new(0.2), {
+                BackgroundTransparency = 0.2
+            })
+            local strokeTween = TweenService:Create(stroke, TweenInfo.new(0.2), {
+                Transparency = 0.5
+            })
+            leaveTween:Play()
+            strokeTween:Play()
+        end)
+
+        return button
+    end
+
+    local PlayerDropdown = createButton("Selecionar Jogador", 0, "👤")
+
+    -- Dropdown melhorado
+    local DropdownScroll = Instance.new("ScrollingFrame")
+    DropdownScroll.Size = UDim2.new(1, -20, 0, 120)
+    DropdownScroll.Position = UDim2.new(0, 10, 0, 60)
+    DropdownScroll.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    DropdownScroll.BackgroundTransparency = 0.1
+    DropdownScroll.Visible = false
+    DropdownScroll.ZIndex = 10
+    DropdownScroll.Parent = MainFrame
+    DropdownScroll.ScrollBarThickness = 6
+    DropdownScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    DropdownScroll.ClipsDescendants = true
+    DropdownScroll.ScrollingDirection = Enum.ScrollingDirection.Y  
+    DropdownScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    DropdownScroll.Active = true
+    DropdownScroll.ScrollBarImageColor3 = Color3.fromRGB(147, 112, 219)
+
+    local UICornerScroll = Instance.new("UICorner")
+    UICornerScroll.CornerRadius = UDim.new(0, 10)
+    UICornerScroll.Parent = DropdownScroll
+
+    local DropStroke = Instance.new("UIStroke")
+    DropStroke.Color = Color3.fromRGB(147, 112, 219)
+    DropStroke.Thickness = 2
+    DropStroke.Parent = DropdownScroll
+
+    local BringButton = createButton("📍 Puxar Jogador", 55, "")
+    local KillButton = createButton("💀 Matar Jogador", 110, "")
+    local KickButton = createButton("🚪 Expulsar Jogador", 165, "")
+    local JailButton = createButton("🔒 Prender Jogador", 220, "")
+    local UnjailButton = createButton("🔓 Soltar Jogador", 275, "")
+    local FreezeButton = createButton("❄️ Congelar Jogador", 330, "")
+    local Sharin = createButton("👁️ Mangekyou Sharingan", 385, "")
+    
+    local function animateButton(btn)
+        btn.MouseButton1Click:Connect(function()
+            local originalScale = btn.Size
+            local pressedScale = UDim2.new(originalScale.X.Scale * 0.95, originalScale.X.Offset * 0.95, originalScale.Y.Scale * 0.95, originalScale.Y.Offset * 0.95)
+
+            local pressTween = TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = pressedScale
+            })
+            local releaseTween = TweenService:Create(btn, TweenInfo.new(0.2, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {
+                Size = originalScale
+            })
+
+            pressTween:Play()
+            pressTween.Completed:Connect(function()
+                releaseTween:Play()
+            end)
+        end)
+    end
+
+    for _, btn in ipairs({PlayerDropdown, BringButton, KillButton, KickButton, JailButton, UnjailButton, FreezeButton, Sharin}) do
+        animateButton(btn)
+    end
+
+    local function populateDropdown()
+        for _, child in pairs(DropdownScroll:GetChildren()) do
+            if child:IsA("TextButton") then child:Destroy() end
+        end
+
+        local yPos = 0
+        for i, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                local btn = Instance.new("TextButton")
+                btn.Size = UDim2.new(1, -10, 0, 30)
+                btn.Position = UDim2.new(0, 5, 0, yPos)
+                btn.Text = "👤 " .. player.Name
+                btn.Font = Enum.Font.Gotham
+                btn.TextSize = 14
+                btn.BackgroundColor3 = Color3.fromRGB(75, 0, 130)
+                btn.BackgroundTransparency = 0.3
+                btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                btn.ZIndex = 11
+                btn.Parent = DropdownScroll
+
+                local corner = Instance.new("UICorner")
+                corner.CornerRadius = UDim.new(0, 8)
+                corner.Parent = btn
+
+                local stroke = Instance.new("UIStroke")
+                stroke.Color = Color3.fromRGB(147, 112, 219)
+                stroke.Thickness = 1
+                stroke.Transparency = 0.6
+                stroke.Parent = btn
+
+                btn.MouseEnter:Connect(function()
+                    btn.BackgroundTransparency = 0.1
+                    stroke.Transparency = 0.3
+                end)
+
+                btn.MouseLeave:Connect(function()
+                    btn.BackgroundTransparency = 0.3
+                    stroke.Transparency = 0.6
+                end)
+
+                btn.MouseButton1Click:Connect(function()
+                    selectedPlayer = player
+                    PlayerDropdown.Text = "👤 Selecionado: " .. player.Name
+                    DropdownScroll.Visible = false
+                end)
+                
+                yPos = yPos + 35
+            end
+        end
+    end
+
+    PlayerDropdown.MouseButton1Click:Connect(function()
+        DropdownScroll.Visible = not DropdownScroll.Visible
+        populateDropdown()
+    end)
+
+    -- EVENTOS DOS BOTÕES CORRIGIDOS PARA BROADCAST
+    KillButton.MouseButton1Click:Connect(function()
+        if selectedPlayer then
+            broadcastCommand("kill", selectedPlayer.Name)
+        else
+            showNotification("⚠️ Selecione um jogador primeiro!", Color3.fromRGB(220, 20, 60))
+        end
+    end)
+
+    KickButton.MouseButton1Click:Connect(function()
+        if selectedPlayer then
+            broadcastCommand("kick", selectedPlayer.Name)
+        else
+            showNotification("⚠️ Selecione um jogador primeiro!", Color3.fromRGB(220, 20, 60))
+        end
+    end)
+
+    BringButton.MouseButton1Click:Connect(function()
+        if selectedPlayer then
+            broadcastCommand("bring", selectedPlayer.Name)
+        else
+            showNotification("⚠️ Selecione um jogador primeiro!", Color3.fromRGB(220, 20, 60))
+        end
+    end)
+
+    JailButton.MouseButton1Click:Connect(function()
+        if selectedPlayer then
+            broadcastCommand("jail", selectedPlayer.Name)
+        else
+            showNotification("⚠️ Selecione um jogador primeiro!", Color3.fromRGB(220, 20, 60))
+        end
+    end)
+
+    UnjailButton.MouseButton1Click:Connect(function()
+        if selectedPlayer then
+            broadcastCommand("unjail", selectedPlayer.Name)
+        else
+            showNotification("⚠️ Selecione um jogador primeiro!", Color3.fromRGB(220, 20, 60))
+        end
+    end)
+
+    FreezeButton.MouseButton1Click:Connect(function()
+        if selectedPlayer then
+            broadcastCommand("freeze", selectedPlayer.Name)
+        else
+            showNotification("⚠️ Selecione um jogador primeiro!", Color3.fromRGB(220, 20, 60))
+        end
+    end)
+
+    Sharin.MouseButton1Click:Connect(function()
+        if selectedPlayer then
+            broadcastCommand("sharingan", selectedPlayer.Name)
+        else
+            showNotification("⚠️ Selecione um jogador primeiro!", Color3.fromRGB(220, 20, 60))
+        end
+    end)
+
+    -- Botão toggle melhorado
+    local toggleGui = Instance.new("ScreenGui")
+    toggleGui.Name = "ToggleGui"
+    toggleGui.Parent = PlayerGui
+    toggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    toggleGui.ResetOnSpawn = false
+
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Size = UDim2.new(0, 50, 0, 50)
+    toggleButton.Position = UDim2.new(0, 15, 0.5, -25)
+    toggleButton.BackgroundColor3 = Color3.fromRGB(75, 0, 130)
+    toggleButton.BackgroundTransparency = 0.1
+    toggleButton.Text = "⚡"
+    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleButton.TextSize = 20
+    toggleButton.Font = Enum.Font.GothamBold
+    toggleButton.Parent = toggleGui
+
+    local toggleGradient = Instance.new("UIGradient")
+    toggleGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(138, 43, 226)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(75, 0, 130))
+    }
+    toggleGradient.Parent = toggleButton
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = toggleButton
+
+    local toggleStroke = Instance.new("UIStroke")
+    toggleStroke.Color = Color3.fromRGB(147, 112, 219)
+    toggleStroke.Thickness = 3
+    toggleStroke.Parent = toggleButton
+
+    local panelOpen = true
+
+    toggleButton.MouseButton1Click:Connect(function()
+        local targetPos
+        if panelOpen then
+            targetPos = UDim2.new(0.5, -175, 1.5, 0)
+        else
+            targetPos = UDim2.new(0.5, -175, 0.5, -240)
+        end
+
+        local tween = TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {
+            Position = targetPos
+        })
+        tween:Play()
+
+        panelOpen = not panelOpen
+    end)
+
+end
+
+-- Sistema de comandos via chat CORRIGIDO para broadcast
+TextChatService.TextChannels.RBXGeneral.MessageReceived:Connect(function(message)
+    local text = message.Text:lower()
+    local sender = message.TextSource and Players:GetPlayerByUserId(message.TextSource.UserId)
+
+    if not sender or not allowedUsers[sender.Name] then return end
+
+    local function findTarget(name)
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player.Name:lower():sub(1, #name) == name:lower() then
+                return player
+            end
+        end
+    end
+
+    local args = {}
+    for word in text:gmatch("%S+") do
+        table.insert(args, word)
+    end
+
+    local cmd = args[1]
+    local targetName = args[2]
+    local target = targetName and findTarget(targetName)
+
+    -- Comandos que agora fazem broadcast para TODOS os jogadores autorizados
+    if cmd == "/kill" and target then
+        broadcastCommand("kill", target.Name)
+        
+    elseif cmd == "/kick" and target then
+        broadcastCommand("kick", target.Name)
+        
+    elseif cmd == "/bring" and target then
+        broadcastCommand("bring", target.Name)
+        
+    elseif cmd == "/jail" and target then
+        broadcastCommand("jail", target.Name)
+        
+    elseif cmd == "/unjail" and target then
+        broadcastCommand("unjail", target.Name)
+        
+    elseif cmd == "/freez" and target then
+        broadcastCommand("freeze", target.Name)
+        
+    elseif cmd == "/shr" and target then
+        broadcastCommand("sharingan", target.Name)
+    end
+end)
+
+-- Sistema de limpeza quando jogadores saem
+Players.PlayerRemoving:Connect(function(player)
+    -- Limpar jaula se existir
+    if JailObjects[player] then
+        JailObjects[player]:Destroy()
+        JailObjects[player] = nil
+    end
+    
+    -- Limpar estado de congelamento
+    if FrozenPlayers[player] then
+        if FrozenPlayers[player].iceEffect then
+            FrozenPlayers[player].iceEffect:Destroy()
+        end
+        FrozenPlayers[player] = nil
+    end
+end)
+
+-- Atualizar dropdown quando jogadores entram/saem
+Players.PlayerAdded:Connect(function()
+    task.wait(1) -- Aguardar um pouco para garantir que o jogador foi carregado
+    if allowedUsers[LocalPlayer.Name] and DropdownScroll and DropdownScroll.Visible then
+        populateDropdown()
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    -- Se o jogador selecionado saiu, resetar seleção
+    if selectedPlayer == player then
+        selectedPlayer = nil
+        if allowedUsers[LocalPlayer.Name] and PlayerDropdown then
+            PlayerDropdown.Text = "👤 Selecionar Jogador"
+        end
+    end
+    
+    -- Atualizar dropdown se estiver aberto
+    if allowedUsers[LocalPlayer.Name] and DropdownScroll and DropdownScroll.Visible then
+        populateDropdown()
+    end
+end)
+
+-- Sistema de monitoramento de conexão melhorado
+spawn(function()
+    while task.wait(5) do
+        -- Verificar se os RemoteEvents ainda existem
+        if not ReplicatedStorage:FindFirstChild("AdminPanelRemote") or not ReplicatedStorage:FindFirstChild("AdminPanelBindable") then
+            adminRemote, adminBindable = setupRemoteEvents()
+            
+            -- Reconectar eventos
+            adminRemote.OnClientEvent:Connect(function(commandData)
+                processCommand(commandData)
+            end)
+            
+            adminBindable.Event:Connect(function(commandData)
+                processCommand(commandData)
+            end)
+        end
+    end
+end)
+
+-- Sistema para manter sincronização de jogadores congelados/presos
+spawn(function()
+    while task.wait(2) do
+        -- Verificar jaulas existentes
+        for player, jail in pairs(JailObjects) do
+            if not player.Parent or not jail.Parent then
+                JailObjects[player] = nil
+            end
+        end
+        
+        -- Verificar jogadores congelados
+        for player, data in pairs(FrozenPlayers) do
+            if not player.Parent then
+                if data.iceEffect then
+                    data.iceEffect:Destroy()
+                end
+                FrozenPlayers[player] = nil
+            else
+                -- Garantir que o jogador continue congelado
+                local character = player.Character
+                if character then
+                    local humanoid = character:FindFirstChildOfClass("Humanoid")
+                    if humanoid then
+                        humanoid.WalkSpeed = 0
+                        humanoid.JumpPower = 0
+                        humanoid.JumpHeight = 0
+                    end
+                    
+                    -- Manter partes ancoradas
+                    for _, part in pairs(character:GetChildren()) do
+                        if part:IsA("BasePart") then
+                            part.Anchored = true
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- Mensagem de inicialização para TODOS os jogadores
+task.wait(2)
+showNotification("⚡ Painel de Admin Sincronizado V2 Carregado! ⚡", Color3.fromRGB(138, 43, 226))
+
+-- Mensagem especial para admins
+if allowedUsers[LocalPlayer.Name] then
+    task.wait(1)
+    showNotification("👑 Você é um ADMINISTRADOR! 👑", Color3.fromRGB(255, 215, 0))
+end
