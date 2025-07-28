@@ -11,16 +11,14 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 getgenv().ScriptID = "MeuScriptUnico" 
 local allowedUsers = {
-    -- ["magnusfxp"] = true,
     ["scout7ixs"] = true,
-   -- ["dripcliento"] = true,
 }
 
 local selectedPlayer = nil
 local JailObjects = {}
 local FrozenPlayers = {}
 
--- Sistema de comunicação melhorado entre scripts
+-- Sistema de comunicação entre scripts
 local function setupRemoteEvents()
     local adminRemote = ReplicatedStorage:FindFirstChild("AdminPanelRemote")
     if not adminRemote then
@@ -88,7 +86,7 @@ function processCommand(commandData)
     
     -- EXECUTAR COMANDOS BASEADO NO TIPO
     if command == "jail" then
-        CreateJail(targetPlayer, true) -- true indica que é via broadcast
+        CreateJail(targetPlayer, true)
     elseif command == "unjail" then
         RemoveJail(targetPlayer, true)
     elseif command == "freeze" then
@@ -177,82 +175,14 @@ function ExecuteSharingan()
     )
 end
 
--- Função para mostrar notificações
-function showNotification(text, color)
-    spawn(function()
-        local gui = Instance.new("ScreenGui")
-        gui.Parent = PlayerGui
-        
-        local frame = Instance.new("Frame")
-        frame.Size = UDim2.new(0, 350, 0, 60)
-        frame.Position = UDim2.new(0.5, -175, 0.1, 0)
-        frame.BackgroundColor3 = color
-        frame.BackgroundTransparency = 0.1
-        frame.Parent = gui
-        
-        local gradient = Instance.new("UIGradient")
-        local brightColor = Color3.new(
-            math.min(color.R * 1.5, 1),
-            math.min(color.G * 1.5, 1), 
-            math.min(color.B * 1.5, 1)
-        )
-        gradient.Color = ColorSequence.new{
-            ColorSequenceKeypoint.new(0, color),
-            ColorSequenceKeypoint.new(1, brightColor)
-        }
-        gradient.Parent = frame
-        
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 12)
-        corner.Parent = frame
-        
-        local stroke = Instance.new("UIStroke")
-        stroke.Color = Color3.fromRGB(255, 255, 255)
-        stroke.Thickness = 2
-        stroke.Parent = frame
-        
-        local textLabel = Instance.new("TextLabel")
-        textLabel.Size = UDim2.new(1, 0, 1, 0)
-        textLabel.BackgroundTransparency = 1
-        textLabel.Text = text
-        textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        textLabel.TextScaled = true
-        textLabel.Font = Enum.Font.GothamBold
-        textLabel.TextStrokeTransparency = 0
-        textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        textLabel.Parent = frame
-        
-        -- Animação de entrada
-        frame.Position = UDim2.new(0.5, -175, -0.1, 0)
-        local enterTween = TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Position = UDim2.new(0.5, -175, 0.1, 0)
-        })
-        enterTween:Play()
-        
-        task.wait(3)
-        
-        -- Animação de saída
-        local exitTween = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Position = UDim2.new(0.5, -175, -0.1, 0),
-            BackgroundTransparency = 1
-        })
-        exitTween:Play()
-        exitTween.Completed:Connect(function()
-            gui:Destroy()
-        end)
-    end)
-end
-
--- Função para criar jaula MELHORADA com sincronização
+-- Função para criar jaula
 function CreateJail(player, fromBroadcast)
-    -- Evitar duplicação se já existe jaula
     if JailObjects[player] then return end
     
     local character = player.Character
     if character and character:FindFirstChild("HumanoidRootPart") then
         local HRP = character.HumanoidRootPart
         
-        -- Configuração da jaula
         local cageSize = Vector3.new(10, 10, 10)
         local wallThickness = 0.5
         local transparency = 0.3
@@ -273,7 +203,6 @@ function CreateJail(player, fromBroadcast)
             wall.CFrame = HRP.CFrame * positionOffset
             wall.Parent = cageModel
             
-            -- Adicionar borda roxa brilhante
             local stroke = Instance.new("SelectionBox")
             stroke.Color3 = Color3.fromRGB(147, 112, 219)
             stroke.LineThickness = 0.2
@@ -302,19 +231,14 @@ function CreateJail(player, fromBroadcast)
 
         JailObjects[player] = cageModel
         
-        -- Notificação visual SEMPRE aparece
-        showNotification("🔒 " .. player.Name .. " foi preso!", Color3.fromRGB(75, 0, 130))
-        
         -- Sistema de monitoramento para manter a jaula
         spawn(function()
             while JailObjects[player] and player.Parent do
                 task.wait(0.5)
                 if character and character:FindFirstChild("HumanoidRootPart") then
                     local currentHRP = character.HumanoidRootPart
-                    -- Verificar se o jogador não saiu muito da jaula
                     local distance = (currentHRP.Position - HRP.Position).Magnitude
                     if distance > 8 then
-                        -- Teleportar de volta para o centro da jaula
                         currentHRP.CFrame = HRP.CFrame
                     end
                 end
@@ -323,25 +247,20 @@ function CreateJail(player, fromBroadcast)
     end
 end
 
--- Função para remover jaula MELHORADA
+-- Função para remover jaula
 function RemoveJail(player, fromBroadcast)
     if JailObjects[player] then
         JailObjects[player]:Destroy()
         JailObjects[player] = nil
-        
-        -- Notificação visual SEMPRE aparece
-        showNotification("🔓 " .. player.Name .. " foi solto!", Color3.fromRGB(34, 139, 34))
     end
 end
 
--- Função para congelar jogador CORRIGIDA
+-- Função para congelar jogador
 function FreezePlayer(player, fromBroadcast)
-    -- Evitar duplicação
     if FrozenPlayers[player] then return end
     
     local character = player.Character
     if character then
-        -- Desativar movimento do Humanoid
         local humanoid = character:FindFirstChildOfClass("Humanoid")
         if humanoid then
             humanoid.WalkSpeed = 0
@@ -349,20 +268,17 @@ function FreezePlayer(player, fromBroadcast)
             humanoid.JumpHeight = 0
         end
 
-        -- Ancorar TODAS as partes do corpo para congelamento completo
         for _, part in pairs(character:GetChildren()) do
             if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
                 part.Anchored = true
             end
         end
         
-        -- Ancorar o HumanoidRootPart por último
         local HRP = character:FindFirstChild("HumanoidRootPart")
         if HRP then
             HRP.Anchored = true
         end
         
-        -- Armazenar dados para restaurar depois
         FrozenPlayers[player] = {
             originalWalkSpeed = humanoid and humanoid.WalkSpeed or 16,
             originalJumpPower = humanoid and humanoid.JumpPower or 50,
@@ -372,7 +288,6 @@ function FreezePlayer(player, fromBroadcast)
             character = character
         }
         
-        -- Criar efeito visual de gelo
         local iceEffect = Instance.new("Part")
         iceEffect.Name = "IceEffect_" .. player.Name
         iceEffect.Size = character:GetExtentsSize() + Vector3.new(1, 1, 1)
@@ -384,13 +299,7 @@ function FreezePlayer(player, fromBroadcast)
         iceEffect.Material = Enum.Material.Ice
         iceEffect.Parent = workspace
         
-        local iceCorner = Instance.new("UICorner")
-        iceCorner.CornerRadius = UDim.new(0, 8)
-        
         FrozenPlayers[player].iceEffect = iceEffect
-        
-        -- Notificação visual SEMPRE aparece
-        showNotification("❄️ " .. player.Name .. " foi congelado!", Color3.fromRGB(70, 130, 180))
         
         -- Sistema de monitoramento para manter congelado
         spawn(function()
@@ -405,7 +314,6 @@ function FreezePlayer(player, fromBroadcast)
                         hum.JumpHeight = 0
                     end
                     
-                    -- Manter todas as partes ancoradas
                     for _, part in pairs(char:GetChildren()) do
                         if part:IsA("BasePart") then
                             part.Anchored = true
@@ -417,19 +325,17 @@ function FreezePlayer(player, fromBroadcast)
     end
 end
 
--- Função para descongelar jogador CORRIGIDA
+-- Função para descongelar jogador
 function UnfreezePlayer(player, fromBroadcast)
     if FrozenPlayers[player] then
         local data = FrozenPlayers[player]
         
-        -- Restaurar movimento do Humanoid
         if data.humanoid and data.humanoid.Parent then
             data.humanoid.WalkSpeed = data.originalWalkSpeed or 16
             data.humanoid.JumpPower = data.originalJumpPower or 50
             data.humanoid.JumpHeight = data.originalJumpHeight or 7.2
         end
         
-        -- Desancorar TODAS as partes do corpo
         if data.character and data.character.Parent then
             for _, part in pairs(data.character:GetChildren()) do
                 if part:IsA("BasePart") then
@@ -438,18 +344,15 @@ function UnfreezePlayer(player, fromBroadcast)
             end
         end
         
-        -- Remover efeito visual de gelo
         if data.iceEffect then
             data.iceEffect:Destroy()
         end
         
         FrozenPlayers[player] = nil
-        
-        -- Notificação visual SEMPRE aparece
-        showNotification("🔥 " .. player.Name .. " foi descongelado!", Color3.fromRGB(255, 140, 0))
     end
 end
 
+-- CRIAR PAINEL APENAS PARA USUÁRIOS AUTORIZADOS
 if allowedUsers[LocalPlayer.Name] then
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "AdminPanelGUI"
@@ -512,7 +415,7 @@ if allowedUsers[LocalPlayer.Name] then
     Title.Size = UDim2.new(1, 0, 0, 50)
     Title.Position = UDim2.new(0, 0, 0, 0)
     Title.BackgroundTransparency = 1
-    Title.Text = "⚡ PAINEL DE ADMIN SINCRONIZADO V2 ⚡"
+    Title.Text = "⚡ PAINEL DE ADMIN SINCRONIZADO ⚡"
     Title.Font = Enum.Font.GothamBold
     Title.TextSize = 16
     Title.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -722,60 +625,46 @@ if allowedUsers[LocalPlayer.Name] then
         populateDropdown()
     end)
 
-    -- EVENTOS DOS BOTÕES CORRIGIDOS PARA BROADCAST
+    -- EVENTOS DOS BOTÕES
     KillButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
             broadcastCommand("kill", selectedPlayer.Name)
-        else
-            showNotification("⚠️ Selecione um jogador primeiro!", Color3.fromRGB(220, 20, 60))
         end
     end)
 
     KickButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
             broadcastCommand("kick", selectedPlayer.Name)
-        else
-            showNotification("⚠️ Selecione um jogador primeiro!", Color3.fromRGB(220, 20, 60))
         end
     end)
 
     BringButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
             broadcastCommand("bring", selectedPlayer.Name)
-        else
-            showNotification("⚠️ Selecione um jogador primeiro!", Color3.fromRGB(220, 20, 60))
         end
     end)
 
     JailButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
             broadcastCommand("jail", selectedPlayer.Name)
-        else
-            showNotification("⚠️ Selecione um jogador primeiro!", Color3.fromRGB(220, 20, 60))
         end
     end)
 
     UnjailButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
             broadcastCommand("unjail", selectedPlayer.Name)
-        else
-            showNotification("⚠️ Selecione um jogador primeiro!", Color3.fromRGB(220, 20, 60))
         end
     end)
 
     FreezeButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
             broadcastCommand("freeze", selectedPlayer.Name)
-        else
-            showNotification("⚠️ Selecione um jogador primeiro!", Color3.fromRGB(220, 20, 60))
         end
     end)
 
     Sharin.MouseButton1Click:Connect(function()
         if selectedPlayer then
             broadcastCommand("sharingan", selectedPlayer.Name)
-        else
-            showNotification("⚠️ Selecione um jogador primeiro!", Color3.fromRGB(220, 20, 60))
         end
     end)
 
@@ -857,7 +746,7 @@ TextChatService.TextChannels.RBXGeneral.MessageReceived:Connect(function(message
     local targetName = args[2]
     local target = targetName and findTarget(targetName)
 
-    -- Comandos que agora fazem broadcast para TODOS os jogadores autorizados
+    -- Comandos que agora fazem broadcast para TODOS os jogadores
     if cmd == "/kill" and target then
         broadcastCommand("kill", target.Name)
         
@@ -898,37 +787,33 @@ Players.PlayerRemoving:Connect(function(player)
     end
 end)
 
--- Atualizar dropdown quando jogadores entram/saem
-Players.PlayerAdded:Connect(function()
-    task.wait(1) -- Aguardar um pouco para garantir que o jogador foi carregado
-    if allowedUsers[LocalPlayer.Name] and DropdownScroll and DropdownScroll.Visible then
-        populateDropdown()
-    end
-end)
+-- Atualizar dropdown quando jogadores entram/saem (apenas para admins)
+if allowedUsers[LocalPlayer.Name] then
+    Players.PlayerAdded:Connect(function()
+        task.wait(1)
+        if DropdownScroll and DropdownScroll.Visible then
+            populateDropdown()
+        end
+    end)
 
-Players.PlayerRemoving:Connect(function(player)
-    -- Se o jogador selecionado saiu, resetar seleção
-    if selectedPlayer == player then
-        selectedPlayer = nil
-        if allowedUsers[LocalPlayer.Name] and PlayerDropdown then
+    Players.PlayerRemoving:Connect(function(player)
+        if selectedPlayer == player then
+            selectedPlayer = nil
             PlayerDropdown.Text = "👤 Selecionar Jogador"
         end
-    end
-    
-    -- Atualizar dropdown se estiver aberto
-    if allowedUsers[LocalPlayer.Name] and DropdownScroll and DropdownScroll.Visible then
-        populateDropdown()
-    end
-end)
+        
+        if DropdownScroll and DropdownScroll.Visible then
+            populateDropdown()
+        end
+    end)
+end
 
 -- Sistema de monitoramento de conexão melhorado
 spawn(function()
     while task.wait(5) do
-        -- Verificar se os RemoteEvents ainda existem
         if not ReplicatedStorage:FindFirstChild("AdminPanelRemote") or not ReplicatedStorage:FindFirstChild("AdminPanelBindable") then
             adminRemote, adminBindable = setupRemoteEvents()
             
-            -- Reconectar eventos
             adminRemote.OnClientEvent:Connect(function(commandData)
                 processCommand(commandData)
             end)
@@ -979,13 +864,3 @@ spawn(function()
         end
     end
 end)
-
--- Mensagem de inicialização para TODOS os jogadores
-task.wait(2)
-showNotification("⚡ Painel de Admin Sincronizado V2 Carregado! ⚡", Color3.fromRGB(138, 43, 226))
-
--- Mensagem especial para admins
-if allowedUsers[LocalPlayer.Name] then
-    task.wait(1)
-    showNotification("👑 Você é um ADMINISTRADOR! 👑", Color3.fromRGB(255, 215, 0))
-end
