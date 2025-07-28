@@ -628,43 +628,57 @@ if allowedUsers[LocalPlayer.Name] then
     -- EVENTOS DOS BOTÕES
     KillButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
-            broadcastCommand("kill", selectedPlayer.Name)
+            -- Enviar comando no chat
+            local chatChannel = TextChatService.TextChannels.RBXGeneral
+            chatChannel:SendAsync("/kill " .. selectedPlayer.Name)
         end
     end)
 
     KickButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
-            broadcastCommand("kick", selectedPlayer.Name)
+            -- Enviar comando no chat
+            local chatChannel = TextChatService.TextChannels.RBXGeneral
+            chatChannel:SendAsync("/kick " .. selectedPlayer.Name)
         end
     end)
 
     BringButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
-            broadcastCommand("bring", selectedPlayer.Name)
+            -- Enviar comando no chat
+            local chatChannel = TextChatService.TextChannels.RBXGeneral
+            chatChannel:SendAsync("/bring " .. selectedPlayer.Name)
         end
     end)
 
     JailButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
-            broadcastCommand("jail", selectedPlayer.Name)
+            -- Enviar comando no chat
+            local chatChannel = TextChatService.TextChannels.RBXGeneral
+            chatChannel:SendAsync("/jail " .. selectedPlayer.Name)
         end
     end)
 
     UnjailButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
-            broadcastCommand("unjail", selectedPlayer.Name)
+            -- Enviar comando no chat
+            local chatChannel = TextChatService.TextChannels.RBXGeneral
+            chatChannel:SendAsync("/unjail " .. selectedPlayer.Name)
         end
     end)
 
     FreezeButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
-            broadcastCommand("freeze", selectedPlayer.Name)
+            -- Enviar comando no chat
+            local chatChannel = TextChatService.TextChannels.RBXGeneral
+            chatChannel:SendAsync("/freez " .. selectedPlayer.Name)
         end
     end)
 
     Sharin.MouseButton1Click:Connect(function()
         if selectedPlayer then
-            broadcastCommand("sharingan", selectedPlayer.Name)
+            -- Enviar comando no chat
+            local chatChannel = TextChatService.TextChannels.RBXGeneral
+            chatChannel:SendAsync("/shr " .. selectedPlayer.Name)
         end
     end)
 
