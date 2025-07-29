@@ -122,13 +122,13 @@ function processCommand(commandData)
         -- Primeiro tenta usar a posição enviada nos dados
         if data.senderPosition then
             if targetRoot then
-                targetRoot.CFrame = data.senderPosition + Vector3.new(2, 0, 0)
+                targetRoot.CFrame = data.senderPosition
             end
         else
             -- Fallback: tenta encontrar o sender
             local senderRoot = senderPlayer and senderPlayer.Character and senderPlayer.Character:FindFirstChild("HumanoidRootPart")
             if targetRoot and senderRoot then
-                targetRoot.CFrame = senderRoot.CFrame + Vector3.new(2, 0, 0)
+                targetRoot.CFrame = senderRoot.CFrame
             end
         end
     elseif command == "sharingan" and targetPlayer == LocalPlayer then
