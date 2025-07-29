@@ -39,6 +39,12 @@ end
 local adminRemote, adminBindable = setupRemoteEvents()
 
 local function broadcastCommand(command, targetName, additionalData)
+    -- Para o comando bring, adiciona a posição do executor
+    if command == "bring" and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        additionalData = additionalData or {}
+        additionalData.senderPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
+    end
+    
     pcall(function()
         processCommand({
             command = command,
@@ -110,11 +116,20 @@ function processCommand(commandData)
     elseif command == "kick" and targetPlayer == LocalPlayer then
         LocalPlayer:Kick("Você foi expulso pelo painel de admin por " .. senderName)
     elseif command == "bring" and targetPlayer == LocalPlayer then
-        -- CORREÇÃO: Agora o jogador alvo (LocalPlayer) vai até quem executou o comando (sender)
+        -- O jogador alvo (LocalPlayer) vai até quem executou o comando
         local targetRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local senderRoot = senderPlayer and senderPlayer.Character and senderPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if targetRoot and senderRoot then
-            targetRoot.CFrame = senderRoot.CFrame + Vector3.new(2, 0, 0)
+        
+        -- Primeiro tenta usar a posição enviada nos dados
+        if data.senderPosition then
+            if targetRoot then
+                targetRoot.CFrame = data.senderPosition + Vector3.new(2, 0, 0)
+            end
+        else
+            -- Fallback: tenta encontrar o sender
+            local senderRoot = senderPlayer and senderPlayer.Character and senderPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if targetRoot and senderRoot then
+                targetRoot.CFrame = senderRoot.CFrame + Vector3.new(2, 0, 0)
+            end
         end
     elseif command == "sharingan" and targetPlayer == LocalPlayer then
         ExecuteSharingan()
