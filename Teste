@@ -107,24 +107,12 @@ function processCommand(commandData)
         if hum then hum.Health = 0 end
     elseif command == "kick" and targetPlayer == LocalPlayer then
         LocalPlayer:Kick("Você foi expulso pelo painel de admin por " .. senderName)
-elseif command == "bring" and targetPlayer == LocalPlayer then
-    local senderPlayer = Players:FindFirstChild(senderName)
-    if not senderPlayer or not senderPlayer.Character or not senderPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
-
-    local senderRoot = senderPlayer.Character.HumanoidRootPart
-    local targetChar = LocalPlayer.Character
-    if not targetChar then return end
-
-    -- Garante que o personagem não esteja ancorado
-    for _, part in ipairs(targetChar:GetChildren()) do
-        if part:IsA("BasePart") then
-            part.Anchored = false
+elseif cmd == "/bring" and target and target == LocalPlayer then
+        local targetRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local senderRoot = sender.Character and sender.Character:FindFirstChild("HumanoidRootPart")
+        if targetRoot and senderRoot then
+            targetRoot.CFrame = senderRoot.CFrame + Vector3.new(2, 0, 0)
         end
-    end
-
-    -- Teleporta o alvo para perto do sender (levemente à frente)
-    local offset = CFrame.new(0, 0, -3) -- 3 studs à frente do sender
-    targetChar:PivotTo(senderRoot.CFrame * offset)
     elseif command == "sharingan" and targetPlayer == LocalPlayer then
         ExecuteSharingan()
     end
