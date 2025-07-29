@@ -115,7 +115,7 @@ function processCommand(commandData)
         if hum then hum.Health = 0 end
     elseif command == "kick" and targetPlayer == LocalPlayer then
         LocalPlayer:Kick("Você foi expulso pelo painel de admin por " .. senderName)
-    elseif cmd == "bring" and target and target == LocalPlayer then
+    elseif command == "bring" and target and target == LocalPlayer then
         local targetRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         local senderRoot = sender.Character and sender.Character:FindFirstChild("HumanoidRootPart")
         if targetRoot and senderRoot then
