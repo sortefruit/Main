@@ -16,7 +16,7 @@ local allowedUsers = {
 local selectedPlayer = nil
 local JailObjects = {}
 local FrozenPlayers = {}
-local sharinganRunning = false -- Variável para controlar execução do Sharingan
+local sharinganRunning = false
 
 local function setupRemoteEvents()
     local adminRemote = ReplicatedStorage:FindFirstChild("AdminPanelRemote")
@@ -73,31 +73,39 @@ local function broadcastCommand(command, targetName, additionalData)
     end)
 end
 
-function processCommand(commandData)
+local function processCommand(commandData)
     if not commandData then return end
-    
+
     local command = commandData.command
     local targetName = commandData.target
     local senderName = commandData.sender
     local data = commandData.data or {}
-    
+
     local targetPlayer = Players:FindFirstChild(targetName)
     local senderPlayer = Players:FindFirstChild(senderName)
-    if not targetPlayer then return end
-    
+
+    if not targetPlayer or not senderPlayer then return end
+
     local canExecute = false
-    
-    if targetPlayer == LocalPlayer then
+
+    -- Se o sender for permitido ou se o comando for para o próprio jogador
+    if targetPlayer == LocalPlayer or allowedUsers[senderName] then
         canExecute = true
     end
 
-    if allowedUsers[senderName] then
-        canExecute = true
-    end
-    
     if not canExecute then return end
-    
-    if command == "jail" then
+
+    if command == "bring" then
+        local targetRoot = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local senderRoot = senderPlayer.Character and senderPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+        if targetRoot and senderRoot then
+            targetRoot.CFrame = senderRoot.CFrame + Vector3.new(2, 0, 0) -- Leve deslocamento para evitar sobreposição
+            print("Bring executado com sucesso:", targetName)
+        else
+            warn("HumanoidRootPart não encontrado em um dos jogadores")
+        end
+    elseif command == "jail" then
         CreateJail(targetPlayer, true)
     elseif command == "unjail" then
         RemoveJail(targetPlayer, true)
@@ -112,12 +120,6 @@ function processCommand(commandData)
         if hum then hum.Health = 0 end
     elseif command == "kick" and targetPlayer == LocalPlayer then
         LocalPlayer:Kick("Você foi expulso pelo painel de admin por " .. senderName)
-    elseif command == "bring" and targetPlayer == LocalPlayer then
-        local targetRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local senderRoot = sender.Character and sender.Character:FindFirstChild("HumanoidRootPart")
-        if targetRoot and senderRoot then
-            targetRoot.CFrame = senderRoot.CFrame + Vector3.new(2, 0, 0)
-        end
     elseif command == "sharingan" and targetPlayer == LocalPlayer then
         ExecuteSharingan()
     end
