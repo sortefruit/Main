@@ -77,6 +77,21 @@ function processCommand(commandData)
     local targetPlayer = Players:FindFirstChild(targetName)
     if not targetPlayer then return end
     
+    -- Permite que qualquer jogador com o script execute comandos em si mesmo
+    local canExecute = false
+    
+    -- Se o comando é para o próprio jogador local, permite
+    if targetPlayer == LocalPlayer then
+        canExecute = true
+    end
+    
+    -- Se o sender está na lista de permitidos, pode executar em qualquer um
+    if allowedUsers[senderName] then
+        canExecute = true
+    end
+    
+    if not canExecute then return end
+    
     if command == "jail" then
         CreateJail(targetPlayer, true)
     elseif command == "unjail" then
@@ -92,57 +107,24 @@ function processCommand(commandData)
         if hum then hum.Health = 0 end
     elseif command == "kick" and targetPlayer == LocalPlayer then
         LocalPlayer:Kick("Você foi expulso pelo painel de admin por " .. senderName)
-    elseif command == "bring" and targetPlayer == LocalPlayer then
-        -- CORREÇÃO: Agora pega a posição do sender em tempo real
-        local senderPlayer = Players:FindFirstChild(senderName)
-        if not senderPlayer or not senderPlayer.Character then return end
-        
-        local targetChar = LocalPlayer.Character
-        local senderChar = senderPlayer.Character
-        
-        if not targetChar or not senderChar then return end
-        
-        local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
-        local senderRoot = senderChar:FindFirstChild("HumanoidRootPart")
-        
-        if targetRoot and senderRoot then
-            -- Teleporta imediatamente para a posição atual do sender
-            local bringPosition = senderRoot.CFrame * CFrame.new(3, 0, 0) -- 3 studs na frente
-            targetRoot.CFrame = bringPosition
-            targetRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            targetRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-            
-            -- Força a sincronização da posição
-            if targetRoot.AssemblyLinearVelocity then
-                targetRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            end
-            if targetRoot.AssemblyAngularVelocity then
-                targetRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-            end
-            
-            -- Loop para manter próximo (versão melhorada)
-            spawn(function()
-                local startTime = tick()
-                while tick() - startTime < 10 do -- Máximo 10 segundos
-                    task.wait(0.1)
-                    
-                    -- Verifica se os objetos ainda existem
-                    if not targetRoot or not targetRoot.Parent or 
-                       not senderRoot or not senderRoot.Parent or
-                       not senderChar.Parent or not targetChar.Parent then
-                        break
-                    end
-                    
-                    local distance = (targetRoot.Position - senderRoot.Position).Magnitude
-                    if distance > 15 then -- Se muito longe, reposiciona
-                        local newPosition = senderRoot.CFrame * CFrame.new(3, 0, 0)
-                        targetRoot.CFrame = newPosition
-                        targetRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                        targetRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                    end
-                end
-            end)
+elseif command == "bring" and targetPlayer == LocalPlayer then
+    local senderPlayer = Players:FindFirstChild(senderName)
+    if not senderPlayer or not senderPlayer.Character or not senderPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
+
+    local senderRoot = senderPlayer.Character.HumanoidRootPart
+    local targetChar = LocalPlayer.Character
+    if not targetChar then return end
+
+    -- Garante que o personagem não esteja ancorado
+    for _, part in ipairs(targetChar:GetChildren()) do
+        if part:IsA("BasePart") then
+            part.Anchored = false
         end
+    end
+
+    -- Teleporta o alvo para perto do sender (levemente à frente)
+    local offset = CFrame.new(0, 0, -3) -- 3 studs à frente do sender
+    targetChar:PivotTo(senderRoot.CFrame * offset)
     elseif command == "sharingan" and targetPlayer == LocalPlayer then
         ExecuteSharingan()
     end
@@ -736,7 +718,7 @@ TextChatService.TextChannels.RBXGeneral.MessageReceived:Connect(function(message
     local text = message.Text:lower()
     local sender = message.TextSource and Players:GetPlayerByUserId(message.TextSource.UserId)
 
-    if not sender or not allowedUsers[sender.Name] then return end
+    if not sender then return end
 
     local function findTarget(name)
         for _, player in ipairs(Players:GetPlayers()) do
@@ -754,6 +736,8 @@ TextChatService.TextChannels.RBXGeneral.MessageReceived:Connect(function(message
     local cmd = args[1]
     local targetName = args[2]
     local target = targetName and findTarget(targetName)
+    
+    -- Permite que qualquer jogador execute comandos, mas verifica permissões no processCommand
     if cmd == ";kill" and target then
         broadcastCommand("kill", target.Name)
         
