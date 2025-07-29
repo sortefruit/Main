@@ -85,15 +85,12 @@ function processCommand(commandData)
     local senderPlayer = Players:FindFirstChild(senderName)
     if not targetPlayer then return end
     
-    -- Permite que qualquer jogador com o script execute comandos em si mesmo
     local canExecute = false
     
-    -- Se o comando é para o próprio jogador local, permite
     if targetPlayer == LocalPlayer then
         canExecute = true
     end
-    
-    -- Se o sender está na lista de permitidos, pode executar em qualquer um
+
     if allowedUsers[senderName] then
         canExecute = true
     end
@@ -115,7 +112,7 @@ function processCommand(commandData)
         if hum then hum.Health = 0 end
     elseif command == "kick" and targetPlayer == LocalPlayer then
         LocalPlayer:Kick("Você foi expulso pelo painel de admin por " .. senderName)
-    elseif command == "bring" and target and target == LocalPlayer then
+    elseif command == "bring" and targetPlayer == LocalPlayer then
         local targetRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         local senderRoot = sender.Character and sender.Character:FindFirstChild("HumanoidRootPart")
         if targetRoot and senderRoot then
