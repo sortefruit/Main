@@ -115,25 +115,12 @@ function processCommand(commandData)
         if hum then hum.Health = 0 end
     elseif command == "kick" and targetPlayer == LocalPlayer then
         LocalPlayer:Kick("Você foi expulso pelo painel de admin por " .. senderName)
-elseif command == "bring" and targetPlayer == LocalPlayer then
-    -- CORREÇÃO: O jogador alvo (LocalPlayer) vai até quem executou o comando
-    local targetRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    
-    if targetRoot then
-        -- Primeiro tenta usar a posição enviada nos dados
-        if data.senderPosition then
-            -- Adiciona um pequeno offset para evitar que os jogadores fiquem exatamente no mesmo local
-            local offset = CFrame.new(math.random(-2, 2), 0, math.random(-2, 2))
-            targetRoot.CFrame = data.senderPosition * offset
-        else
-            -- Fallback: tenta encontrar o sender
-            local senderRoot = senderPlayer and senderPlayer.Character and senderPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if senderRoot then
-                local offset = CFrame.new(math.random(-2, 2), 0, math.random(-2, 2))
-                targetRoot.CFrame = senderRoot.CFrame * offset
-            end
+    elseif cmd == "bring" and target and target == LocalPlayer then
+        local targetRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local senderRoot = sender.Character and sender.Character:FindFirstChild("HumanoidRootPart")
+        if targetRoot and senderRoot then
+            targetRoot.CFrame = senderRoot.CFrame + Vector3.new(2, 0, 0)
         end
-    end
     elseif command == "sharingan" and targetPlayer == LocalPlayer then
         ExecuteSharingan()
     end
