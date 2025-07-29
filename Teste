@@ -16,6 +16,7 @@ local allowedUsers = {
 local selectedPlayer = nil
 local JailObjects = {}
 local FrozenPlayers = {}
+local sharinganRunning = false -- Variável para controlar execução do Sharingan
 
 local function setupRemoteEvents()
     local adminRemote = ReplicatedStorage:FindFirstChild("AdminPanelRemote")
@@ -75,6 +76,7 @@ function processCommand(commandData)
     local data = commandData.data or {}
     
     local targetPlayer = Players:FindFirstChild(targetName)
+    local senderPlayer = Players:FindFirstChild(senderName)
     if not targetPlayer then return end
     
     -- Permite que qualquer jogador com o script execute comandos em si mesmo
@@ -107,9 +109,10 @@ function processCommand(commandData)
         if hum then hum.Health = 0 end
     elseif command == "kick" and targetPlayer == LocalPlayer then
         LocalPlayer:Kick("Você foi expulso pelo painel de admin por " .. senderName)
-elseif cmd == "/bring" and target and target == LocalPlayer then
+    elseif command == "bring" and targetPlayer == LocalPlayer then
+        -- CORREÇÃO: Agora o jogador alvo (LocalPlayer) vai até quem executou o comando (sender)
         local targetRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local senderRoot = sender.Character and sender.Character:FindFirstChild("HumanoidRootPart")
+        local senderRoot = senderPlayer and senderPlayer.Character and senderPlayer.Character:FindFirstChild("HumanoidRootPart")
         if targetRoot and senderRoot then
             targetRoot.CFrame = senderRoot.CFrame + Vector3.new(2, 0, 0)
         end
@@ -127,6 +130,13 @@ adminBindable.Event:Connect(function(commandData)
 end)
 
 function ExecuteSharingan()
+    -- CORREÇÃO: Proteção contra execução múltipla
+    if sharinganRunning then
+        return
+    end
+    
+    sharinganRunning = true
+    
     local Sound = Instance.new("Sound",game:GetService("SoundService"))
     Sound.SoundId = "rbxassetid://1592708450"
     Sound:Play()
@@ -173,6 +183,7 @@ function ExecuteSharingan()
         true,
         function()
             Intro:Destroy()
+            sharinganRunning = false -- Reset da proteção quando terminar
         end
     )
 end
