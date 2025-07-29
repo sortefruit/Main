@@ -16,7 +16,7 @@ local allowedUsers = {
 local selectedPlayer = nil
 local JailObjects = {}
 local FrozenPlayers = {}
-local sharinganRunning = false -- Variável para controlar execução do Sharingan
+local sharinganRunning = false
 
 local function setupRemoteEvents()
     local adminRemote = ReplicatedStorage:FindFirstChild("AdminPanelRemote")
@@ -43,6 +43,7 @@ local function broadcastCommand(command, targetName, additionalData)
     if command == "bring" and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         additionalData = additionalData or {}
         additionalData.senderPosition = LocalPlayer.Character.HumanoidRootPart.CFrame
+        additionalData.senderName = LocalPlayer.Name
     end
     
     pcall(function()
@@ -85,16 +86,14 @@ function processCommand(commandData)
     local senderPlayer = Players:FindFirstChild(senderName)
     if not targetPlayer then return end
     
-    -- Permite que qualquer jogador com o script execute comandos em si mesmo
+    -- Sistema de permissões corrigido
     local canExecute = false
-    
-    -- Se o comando é para o próprio jogador local, permite
-    if targetPlayer == LocalPlayer then
-        canExecute = true
-    end
     
     -- Se o sender está na lista de permitidos, pode executar em qualquer um
     if allowedUsers[senderName] then
+        canExecute = true
+    -- Se o comando é para o próprio jogador local, permite
+    elseif targetPlayer == LocalPlayer then
         canExecute = true
     end
     
@@ -116,19 +115,22 @@ function processCommand(commandData)
     elseif command == "kick" and targetPlayer == LocalPlayer then
         LocalPlayer:Kick("Você foi expulso pelo painel de admin por " .. senderName)
     elseif command == "bring" and targetPlayer == LocalPlayer then
-        -- O jogador alvo (LocalPlayer) vai até quem executou o comando
+        -- CORREÇÃO: O jogador alvo (LocalPlayer) vai até quem executou o comando
         local targetRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         
-        -- Primeiro tenta usar a posição enviada nos dados
-        if data.senderPosition then
-            if targetRoot then
-                targetRoot.CFrame = data.senderPosition
-            end
-        else
-            -- Fallback: tenta encontrar o sender
-            local senderRoot = senderPlayer and senderPlayer.Character and senderPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if targetRoot and senderRoot then
-                targetRoot.CFrame = senderRoot.CFrame
+        if targetRoot then
+            -- Primeiro tenta usar a posição enviada nos dados
+            if data.senderPosition then
+                -- Adiciona um pequeno offset para evitar que os jogadores fiquem exatamente no mesmo local
+                local offset = CFrame.new(math.random(-3, 3), 0, math.random(-3, 3))
+                targetRoot.CFrame = data.senderPosition * offset
+            else
+                -- Fallback: tenta encontrar o sender
+                local senderRoot = senderPlayer and senderPlayer.Character and senderPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if senderRoot then
+                    local offset = CFrame.new(math.random(-3, 3), 0, math.random(-3, 3))
+                    targetRoot.CFrame = senderRoot.CFrame * offset
+                end
             end
         end
     elseif command == "sharingan" and targetPlayer == LocalPlayer then
@@ -145,7 +147,6 @@ adminBindable.Event:Connect(function(commandData)
 end)
 
 function ExecuteSharingan()
-    -- CORREÇÃO: Proteção contra execução múltipla
     if sharinganRunning then
         return
     end
@@ -198,7 +199,8 @@ function ExecuteSharingan()
         true,
         function()
             Intro:Destroy()
-            sharinganRunning = false -- Reset da proteção quando terminar
+            Sound:Destroy()
+            sharinganRunning = false
         end
     )
 end
@@ -243,7 +245,6 @@ function CreateJail(player, fromBroadcast)
         createWall(Vector3.new(cageSize.X, cageSize.Y, wallThickness), CFrame.new(0, 0, -cageSize.Z/2))
         createWall(Vector3.new(cageSize.X, cageSize.Y, wallThickness), CFrame.new(0, 0, cageSize.Z/2))
         createWall(Vector3.new(wallThickness, cageSize.Y, cageSize.Z), CFrame.new(cageSize.X/2, 0, 0))
-
         createWall(Vector3.new(wallThickness, cageSize.Y, cageSize.Z), CFrame.new(-cageSize.X/2, 0, 0))
 
         JailObjects[player] = cageModel
@@ -364,6 +365,7 @@ function UnfreezePlayer(player, fromBroadcast)
     end
 end
 
+-- Interface gráfica (apenas para usuários permitidos)
 if allowedUsers[LocalPlayer.Name] then
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "AdminPanelGUI"
@@ -512,7 +514,7 @@ if allowedUsers[LocalPlayer.Name] then
         return button
     end
 
-    local PlayerDropdown = createButton("Selecionar Jogador", 0, "")
+    local PlayerDropdown = createButton("Selecionar Jogador", 0, "👤")
 
     local DropdownScroll = Instance.new("ScrollingFrame")
     DropdownScroll.Size = UDim2.new(1, -20, 0, 120)
@@ -539,13 +541,13 @@ if allowedUsers[LocalPlayer.Name] then
     DropStroke.Thickness = 2
     DropStroke.Parent = DropdownScroll
 
-    local BringButton = createButton(";Bring cmd", 55, "")
-    local KillButton = createButton(";kill cmd", 110, "")
-    local KickButton = createButton(";kick cmd", 165, "")
-    local JailButton = createButton(" ;jail cmd", 220, "")
-    local UnjailButton = createButton(";unjail cmd", 275, "")
-    local FreezeButton = createButton(";Freezer cmd", 330, "")
-    local Sharin = createButton(";Sharingan cmd", 385, "")
+    local BringButton = createButton("Bring", 55, "📍")
+    local KillButton = createButton("Kill", 110, "💀")
+    local KickButton = createButton("Kick", 165, "👢")
+    local JailButton = createButton("Jail", 220, "🔒")
+    local UnjailButton = createButton("Unjail", 275, "🔓")
+    local FreezeButton = createButton("Freeze", 330, "❄️")
+    local Sharin = createButton("Sharingan", 385, "👁️")
     
     local function animateButton(btn)
         btn.MouseButton1Click:Connect(function()
@@ -581,7 +583,7 @@ if allowedUsers[LocalPlayer.Name] then
                 local btn = Instance.new("TextButton")
                 btn.Size = UDim2.new(1, -10, 0, 30)
                 btn.Position = UDim2.new(0, 5, 0, yPos)
-                btn.Text = ">" .. player.Name
+                btn.Text = "🎮 " .. player.Name
                 btn.Font = Enum.Font.Gotham
                 btn.TextSize = 14
                 btn.BackgroundColor3 = Color3.fromRGB(75, 0, 130)
@@ -612,7 +614,7 @@ if allowedUsers[LocalPlayer.Name] then
 
                 btn.MouseButton1Click:Connect(function()
                     selectedPlayer = player
-                    PlayerDropdown.Text = " Selecionado: " .. player.Name
+                    PlayerDropdown.Text = "👤 " .. player.Name
                     DropdownScroll.Visible = false
                 end)
                 
@@ -626,55 +628,50 @@ if allowedUsers[LocalPlayer.Name] then
         populateDropdown()
     end)
 
+    -- Eventos dos botões com execução direta
+    BringButton.MouseButton1Click:Connect(function()
+        if selectedPlayer then
+            broadcastCommand("bring", selectedPlayer.Name)
+        end
+    end)
+
     KillButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
-            local chatChannel = TextChatService.TextChannels.RBXGeneral
-            chatChannel:SendAsync(";kill " .. selectedPlayer.Name)
+            broadcastCommand("kill", selectedPlayer.Name)
         end
     end)
 
     KickButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
-            local chatChannel = TextChatService.TextChannels.RBXGeneral
-            chatChannel:SendAsync(";kick " .. selectedPlayer.Name)
-        end
-    end)
-
-    BringButton.MouseButton1Click:Connect(function()
-        if selectedPlayer then
-            local chatChannel = TextChatService.TextChannels.RBXGeneral
-            chatChannel:SendAsync(";bring " .. selectedPlayer.Name)
+            broadcastCommand("kick", selectedPlayer.Name)
         end
     end)
 
     JailButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
-            local chatChannel = TextChatService.TextChannels.RBXGeneral
-            chatChannel:SendAsync(";jail " .. selectedPlayer.Name)
+            broadcastCommand("jail", selectedPlayer.Name)
         end
     end)
 
     UnjailButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
-            local chatChannel = TextChatService.TextChannels.RBXGeneral
-            chatChannel:SendAsync(";unjail " .. selectedPlayer.Name)
+            broadcastCommand("unjail", selectedPlayer.Name)
         end
     end)
 
     FreezeButton.MouseButton1Click:Connect(function()
         if selectedPlayer then
-            local chatChannel = TextChatService.TextChannels.RBXGeneral
-            chatChannel:SendAsync(";freez " .. selectedPlayer.Name)
+            broadcastCommand("freeze", selectedPlayer.Name)
         end
     end)
 
     Sharin.MouseButton1Click:Connect(function()
         if selectedPlayer then
-            local chatChannel = TextChatService.TextChannels.RBXGeneral
-            chatChannel:SendAsync(";shr " .. selectedPlayer.Name)
+            broadcastCommand("sharingan", selectedPlayer.Name)
         end
     end)
 
+    -- Botão de toggle
     local toggleGui = Instance.new("ScreenGui")
     toggleGui.Name = "ToggleGui"
     toggleGui.Parent = PlayerGui
@@ -686,7 +683,7 @@ if allowedUsers[LocalPlayer.Name] then
     toggleButton.Position = UDim2.new(0, 15, 0.5, -25)
     toggleButton.BackgroundColor3 = Color3.fromRGB(75, 0, 130)
     toggleButton.BackgroundTransparency = 0.1
-    toggleButton.Text = ""
+    toggleButton.Text = "👑"
     toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     toggleButton.TextSize = 20
     toggleButton.Font = Enum.Font.GothamBold
@@ -728,6 +725,7 @@ if allowedUsers[LocalPlayer.Name] then
 
 end
 
+-- Sistema de comandos via chat
 TextChatService.TextChannels.RBXGeneral.MessageReceived:Connect(function(message)
     local text = message.Text:lower()
     local sender = message.TextSource and Players:GetPlayerByUserId(message.TextSource.UserId)
