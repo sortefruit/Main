@@ -163,10 +163,12 @@ adminBindable.Event:Connect(function(commandData)
 end)
 
 function ToggleGravity(player)
-    local character = player.Character
+    if player ~= LocalPlayer then return end -- Só executa se EU sou o alvo
+    
+    local character = LocalPlayer.Character
     if not character then return end
     
-    if gravityDisabled[player] then
+    if gravityDisabled[LocalPlayer] then
         -- Restaurar gravidade
         workspace.Gravity = 196.2
         for _, part in pairs(character:GetChildren()) do
@@ -177,7 +179,7 @@ function ToggleGravity(player)
                 end
             end
         end
-        gravityDisabled[player] = nil
+        gravityDisabled[LocalPlayer] = nil
     else
         -- Desativar gravidade
         workspace.Gravity = 0
@@ -190,19 +192,21 @@ function ToggleGravity(player)
                 bodyVelocity.Parent = part
             end
         end
-        gravityDisabled[player] = true
+        gravityDisabled[LocalPlayer] = true
     end
 end
 
 function CreateChaosClones(player)
-    local character = player.Character
-    if not character or clonedPlayers[player] then return end
+    if player ~= LocalPlayer then return end -- Só executa se EU sou o alvo
     
-    clonedPlayers[player] = {}
+    local character = LocalPlayer.Character
+    if not character or clonedPlayers[LocalPlayer] then return end
+    
+    clonedPlayers[LocalPlayer] = {}
     
     for i = 1, 5 do
         local clone = character:Clone()
-        clone.Name = player.Name .. "_Clone_" .. i
+        clone.Name = LocalPlayer.Name .. "_Clone_" .. i
         clone.Parent = workspace
         
         -- Remove scripts do clone
@@ -237,7 +241,7 @@ function CreateChaosClones(player)
             end)
         end
         
-        table.insert(clonedPlayers[player], clone)
+        table.insert(clonedPlayers[LocalPlayer], clone)
         
         -- Remove clone após 30 segundos
         game:GetService("Debris"):AddItem(clone, 30)
@@ -246,17 +250,19 @@ function CreateChaosClones(player)
     -- Reset após 35 segundos
     spawn(function()
         wait(35)
-        clonedPlayers[player] = nil
+        clonedPlayers[LocalPlayer] = nil
     end)
 end
 
 function ActivateGlitchMode(player)
-    if glitchActive[player] then return end
-    glitchActive[player] = true
+    if player ~= LocalPlayer then return end -- Só executa se EU sou o alvo
+    if glitchActive[LocalPlayer] then return end
+    
+    glitchActive[LocalPlayer] = true
     
     local gui = Instance.new("ScreenGui")
     gui.Name = "GlitchEffect"
-    gui.Parent = player:WaitForChild("PlayerGui")
+    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
     
     local glitchFrame = Instance.new("Frame")
     glitchFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -294,15 +300,17 @@ function ActivateGlitchMode(player)
         end
         
         gui:Destroy()
-        glitchActive[player] = nil
+        glitchActive[LocalPlayer] = nil
     end)
 end
 
 function ActivateShapeshift(player)
-    if shapeshiftActive[player] then return end
-    shapeshiftActive[player] = true
+    if player ~= LocalPlayer then return end -- Só executa se EU sou o alvo
+    if shapeshiftActive[LocalPlayer] then return end
     
-    local character = player.Character
+    shapeshiftActive[LocalPlayer] = true
+    
+    local character = LocalPlayer.Character
     if not character then return end
     
     -- Lista de formas estranhas
@@ -341,7 +349,7 @@ function ActivateShapeshift(player)
                 end
             end
         end
-        shapeshiftActive[player] = nil
+        shapeshiftActive[LocalPlayer] = nil
     end)
 end
 
