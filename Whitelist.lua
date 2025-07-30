@@ -1,25 +1,28 @@
-return {
-    -- Lista de usuários autorizados
-    users = {
-        "scout7ixs",
-        "OutroAdmin123",
-        "ModeradorTest",
-        -- Adicione mais nomes aqui
-    },
-    
-    -- Configurações do sistema
-    settings = {
-        kickMessage = "🚫 Você não está na whitelist. Contate o suporte.",
-        allowBypass = false,        -- Permite bypass se não conseguir carregar
-        checkInterval = 300,        -- Revalida a cada 5 minutos
-        maxRetries = 3,            -- Tentativas de carregamento
-        version = "1.0.0"          -- Versão da whitelist
-    },
-    
-    -- Níveis de permissão (opcional)
-    permissions = {
-        ["scout7ixs"] = "owner",
-        ["OutroAdmin123"] = "admin",
-        ["ModeradorTest"] = "moderator"
-    }
+
+local player = game.Players.LocalPlayer
+
+local whitelist = {
+""
+
 }
+
+local function normalizeUsername(username)
+    return username:lower():gsub("%s+", "")
+end
+
+local function isWhitelisted(username)
+    local normalizedName = normalizeUsername(username)
+    for _, whitelistedName in ipairs(whitelist) do
+        if normalizeUsername(whitelistedName) == normalizedName then
+            return true
+        end
+    end
+    return false
+end
+
+if isWhitelisted(player.Name) then
+    print("Whitelisted: " .. player.Name)
+else
+    print(player.Name .. " is not on the whitelist. Kicking...")
+    player:Kick("You are not on the whitelist. Please contact support for assistance.")
+end
