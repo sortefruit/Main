@@ -18,6 +18,34 @@ local JailObjects = {}
 local FrozenPlayers = {}
 local sharinganRunning = false -- Variável para controlar execução do Sharingan
 
+-- Função de teleporte com tween
+function topos(Pos)
+    local humanoidRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return end
+    
+    local Distance = (Pos.Position - humanoidRootPart.Position).Magnitude
+
+    if LocalPlayer.Character.Humanoid.Sit then
+        LocalPlayer.Character.Humanoid.Sit = false
+    end
+
+    local tweenSpeed = 50 -- Velocidade do tween
+    local tweenInfo = TweenInfo.new(Distance / tweenSpeed, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
+    local tween = TweenService:Create(humanoidRootPart, tweenInfo, { CFrame = Pos })
+
+    tween:Play()
+
+    if Distance <= 10 then
+        tween:Cancel()
+        humanoidRootPart.CFrame = Pos
+    end
+
+    if getgenv().StopTween then
+        tween:Cancel()
+        getgenv().StopTween = false
+    end
+end
+
 local function setupRemoteEvents()
     local adminRemote = ReplicatedStorage:FindFirstChild("AdminPanelRemote")
     if not adminRemote then
@@ -131,23 +159,7 @@ adminBindable.Event:Connect(function(commandData)
 end)
 
 function BringPlayer(targetPlayer, senderPlayer)
-    if not targetPlayer or not senderPlayer then return end
-    
-    local targetChar = targetPlayer.Character
-    local senderChar = senderPlayer.Character
-    
-    if not targetChar or not senderChar then return end
-    
-    local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
-    local senderHRP = senderChar:FindFirstChild("HumanoidRootPart")
-    
-    if not targetHRP or not senderHRP then return end
-    
-    -- Previne que o jogador traga a si mesmo
-    if targetPlayer == senderPlayer then return end
-    
-    -- Teleporta o jogador alvo para perto do sender (quem enviou o comando)
-    targetHRP.CFrame = senderHRP.CFrame + Vector3.new(0, 1, 0)
+    -- Função removida - agora usa topos() diretamente no processCommand
 end
 
 function ExecuteSharingan()
