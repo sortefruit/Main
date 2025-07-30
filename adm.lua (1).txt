@@ -11,6 +11,7 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 getgenv().ScriptID = "MeuScriptUnico" 
 local allowedUsers = {
     ["scout7ixs"] = true,
+["magnusfxp"] = true,
 }
 
 local selectedPlayer = nil
