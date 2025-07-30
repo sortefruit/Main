@@ -1,7 +1,7 @@
 
 local player = game.Players.LocalPlayer
 
-local whitelist = {
+local allowedUsers = {
 ""
 
 }
