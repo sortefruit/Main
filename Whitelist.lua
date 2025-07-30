@@ -2,7 +2,7 @@
 local player = game.Players.LocalPlayer
 
 local allowedUsers = {
-""
+"scout7ixs"
 
 }
 
